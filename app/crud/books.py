@@ -71,7 +71,7 @@ def get_book_by_id(db: Session, book_id: int):
         "id": book.Id_книги,
         "title": book.Название_книги,
         "author": f"{book.автор_rel.Имя_автора} {book.автор_rel.Фамилия_автора}",
-        "genre": book.жанр_rel.Наименование_жанra,
+        "genre": book.жанр_rel.Наименование_жанрa,
         "coverImage": book.URL_обложки,  # Изменено
         "pages": book.Кол_во_страниц,
         "description": book.Описание
@@ -142,7 +142,7 @@ def create_book(db: Session, book: BookCreate):
         "title": db_book_with_relations.Название_книги,
         "author": f"{db_book_with_relations.автор_rel.Имя_автора} {db_book_with_relations.автор_rel.Фамилия_автора}",
         "genre": db_book_with_relations.жанр_rel.Наименование_жанра,
-        "coverImage": db_book_with_relations.URL_обложки,  # Изменено
+        "coverImage": db_book_with_relations.URL_обложки, 
         "pages": db_book_with_relations.Кол_во_страниц,
         "description": db_book_with_relations.Описание
     }
@@ -211,7 +211,12 @@ def toggle_favorite(db: Session, favorite_data: FavoriteToggle):
     ).first()
     
     if existing_favorite:
-        # Удаляем из избранного
+        # Сначала удаляем все связанные отзывы
+        db.query(Отзывы_пользователя)\
+            .filter(Отзывы_пользователя.Избранная_книга == existing_favorite.id_избранной_книги)\
+            .delete(synchronize_session=False)
+        
+        # Затем удаляем избранную запись
         db.delete(existing_favorite)
         db.commit()
         return {"action": "removed", "favorite_id": existing_favorite.id_избранной_книги}
@@ -318,6 +323,12 @@ def update_favorite_rating_by_book(db: Session, book_id: int, user_id: int, rati
     return review
 
 def remove_from_favorites(db: Session, favorite_id: int):
+    # Сначала удаляем все связанные отзывы
+    db.query(Отзывы_пользователя)\
+        .filter(Отзывы_пользователя.Избранная_книга == favorite_id)\
+        .delete(synchronize_session=False)
+    
+    # Затем удаляем избранную запись
     favorite = db.query(Избранные_книги).filter(
         Избранные_книги.id_избранной_книги == favorite_id
     ).first()
@@ -330,16 +341,24 @@ def remove_from_favorites(db: Session, favorite_id: int):
 
 def remove_from_favorites_by_book(db: Session, book_id: int, user_id: int):
     """Удаляем по book_id и user_id"""
+    # Находим избранную запись
     favorite = db.query(Избранные_книги).filter(
         Избранные_книги.Книга == book_id,
         Избранные_книги.Пользователь == user_id
     ).first()
     
-    if favorite:
-        db.delete(favorite)
-        db.commit()
-        return True
-    return False
+    if not favorite:
+        return False
+    
+    # Сначала удаляем все связанные отзывы
+    db.query(Отзывы_пользователя)\
+        .filter(Отзывы_пользователя.Избранная_книга == favorite.id_избранной_книги)\
+        .delete(synchronize_session=False)
+    
+    # Затем удаляем избранную запись
+    db.delete(favorite)
+    db.commit()
+    return True
 
 # CRUD для пользователей
 def create_user(db: Session, email: str, username: str, password_hash: str):
