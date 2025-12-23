@@ -8,7 +8,6 @@ import json
 
 from app.database import get_db, engine
 from app.models.book import Base
-# Добавьте импорт всех моделей, которые используются
 from app.models.book import Книги, Авторы, Жанры, Статус, Избранные_книги, Отзывы_пользователя, Пользователь
 from app.schemas.book import (
     BookCreate, BookResponse, FavoriteToggle, StatusUpdate, RatingUpdate,
